@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Story Telling Application</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #17cd29;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+       
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #192dc7;
+        }
+        body{
+            background-color: #e8125c;
+        }
+        .card {
+            text-align: center;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background-color: #E5608E;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+
+        button:hover {
+            background-color: #c44b75;
+        }
+
+        .transcription-result {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .transcription-result p {
+            white-space: pre-wrap;
+            line-height: 1.6;
+            color: #444;
+        }
+
+        .encouragement {
+            margin-top: 10px;
+            color: #28a745;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Tell Me Any Story That You Want...Feel Free To Tell</h1>
+    <p>This will also help in improving to reduce your hesitation when you speak in English</p>
+    <div class="card" id="questionCard">
+        <p id="questionText"></p>
+        <button id="recordButton">Start Telling</button>
+        <button id="stopButton" style="display:none;">Stop Telling</button>
+    </div>
+    <div class="transcription-result" id="transcriptionResult">
+        <h2>Your Answer:</h2>
+        <p id="transcriptionText"></p>
+        <p class="encouragement" id="encouragementText"></p>
+    </div>
+</div>
+<script>
+    const questions = [
+        "Tell me any story",
+    ];
+    const encouragementTexts = [
+        "Very Nice story I totally like It Good Work.",
+    ];
+
+    let currentQuestionIndex = 0;
+    let mediaRecorder;
+    let audioChunks = [];
+
+    const questionText = document.getElementById('questionText');
+    const recordButton = document.getElementById('recordButton');
+    const stopButton = document.getElementById('stopButton');
+    const transcriptionText = document.getElementById('transcriptionText');
+    const encouragementText = document.getElementById('encouragementText');
+    const transcriptionResult = document.getElementById('transcriptionResult');
+    const questionCard = document.getElementById('questionCard');
+
+    questionText.textContent = questions[currentQuestionIndex];
+
+    navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+            mediaRecorder = new MediaRecorder(stream);
+
+            mediaRecorder.ondataavailable = event => {
+                audioChunks.push(event.data);
+            };
+
+            mediaRecorder.onstop = () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/mp4' });
+                audioChunks = [];
+                sendAudioForTranscription(audioBlob);
+            };
+        });
+
+    recordButton.addEventListener('click', () => {
+        mediaRecorder.start();
+        recordButton.style.display = 'none';
+        stopButton.style.display = 'inline-block';
+    });
+
+    stopButton.addEventListener('click', () => {
+        mediaRecorder.stop();
+        recordButton.style.display = 'inline-block';
+        stopButton.style.display = 'none';
+    });
+    function sendAudioForTranscription(audioBlob) {
+    const formData = new FormData();
+    formData.append('file', audioBlob, 'recording.mp4');
+    formData.append('userId', '12');
+
+    fetch('https://skillcaptain.app/unicorn/p/speech/transcribe', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.text()) // Get the response as text
+    .then(data => {
+        console.log('Raw API Response:', data); // Debug: Log the raw API response
+
+        // Remove the outer quotes and parse the JSON content
+
+        if (data) {
+            transcriptionText.textContent = data;
+            encouragementText.textContent = encouragementTexts[currentQuestionIndex];
+            transcriptionResult.style.display = 'block';
+
+            setTimeout(() => {
+                transcriptionResult.style.display = 'none';
+                currentQuestionIndex++;
+                if (currentQuestionIndex < questions.length) {
+                    questionText.textContent = questions[currentQuestionIndex];
+                } else {
+                    questionText.textContent = "finally you have done successfully";
+                    recordButton.style.display = 'none';
+                }
+            }, 15000);
+        } else {
+            console.error('No transcription text found in the API response.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+</script>
+
+</body>
+</html>
