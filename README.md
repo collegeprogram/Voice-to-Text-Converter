@@ -1,2 +1,3 @@
 # Voice-to-Text-Converter
-this will help to create any voice into text
+This will help to create any voice into text
+You can implement this in different types of project.
